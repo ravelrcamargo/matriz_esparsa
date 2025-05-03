@@ -27,59 +27,137 @@ void le_matriz(matriz *mat)
     mat->raiz->abaixo = mat->raiz;
 
     // === Criação das CÉLULAS-CABEÇA das COLUNAS ===
+
+    // Ponteiro auxiliar para manter a última célula ligada (inicia na raiz)
     apontador ult = mat->raiz;
 
+    // Para cada coluna, cria uma célula-cabeça associada
     for (int j = 0; j < n; j++)
     {
+        // Aloca uma nova célula para a coluna j
         apontador nova = malloc(sizeof(celula));
+
+        // Como é cabeça de coluna, define linha = -1 e coluna = índice da coluna
         nova->linha = -1;
         nova->coluna = j;
+
+        // Inicializa o ponteiro "direita" como NULL (não é usado nas cabeças de coluna)
         nova->direita = NULL;
-        nova->abaixo = nova; // Lista circular vazia inicialmente
+
+        // A célula aponta para si mesma no eixo vertical, formando lista circular (sem elementos ainda)
+        nova->abaixo = nova;
+
+        // Liga a última célula com essa nova à direita (horizontalmente)
         ult->direita = nova;
+
+        // Atualiza o ponteiro ult para a próxima iteração
         ult = nova;
     }
 
-    ult->direita = mat->raiz; // Fecha lista de colunas
+    // Fecha a lista circular de colunas ligando a última célula criada de volta à raiz
+    ult->direita = mat->raiz;
 
     // === Criação das CÉLULAS-CABEÇA das LINHAS ===
+
+    // Reinicia o ponteiro ult para criar as cabeças de linha
     ult = mat->raiz;
 
+    // Para cada linha, cria uma célula-cabeça associada
     for (int i = 0; i < m; i++)
     {
+        // Aloca uma nova célula para a linha i
         apontador nova = malloc(sizeof(celula));
+
+        // Define o índice da linha, e coluna = -1 por ser célula-cabeça
         nova->linha = i;
         nova->coluna = -1;
-        nova->direita = nova; // Lista circular vazia inicialmente
+
+        // A célula aponta para si mesma na horizontal, formando lista circular (sem elementos ainda)
+        nova->direita = nova;
+
+        // Inicializa o ponteiro "abaixo" como ela mesma (boa prática para segurança de circularidade)
         nova->abaixo = nova;
+
+        // Liga a última célula criada com essa nova na vertical (abaixo)
         ult->abaixo = nova;
+
+        // Atualiza o ponteiro ult
         ult = nova;
     }
 
-    ult->abaixo = mat->raiz; // Fecha lista de linhas
+    // Fecha a lista circular de linhas ligando a última célula de volta à raiz
+    ult->abaixo = mat->raiz;
 
     // === Inserção dos ELEMENTOS diferentes de zero ===
-    float valor;
 
-    printf("Digite os elementos da matriz (linha coluna valor):\n");
+    int i, j;        // Índices da linha e coluna do elemento
+    float valor;     // Valor do elemento
+
+    // Agora, vamos pedir para o usuário inserir todos os elementos da matriz de uma vez
+    printf("Digite os elementos da matriz (para cada elemento, insira linha, coluna e valor):\n");
     printf("Exemplo: 0 0 50  para inserir o valor 50 na posição [0][0]\n");
 
-    for (int i = 0; i < m; i++)
+    // Loop para ler todos os elementos da matriz
+    for (i = 0; i < m; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (j = 0; j < n; j++)
         {
             printf("Digite o valor para a posição [%d][%d]: ", i, j);
             scanf("%f", &valor);
 
-            if (valor != 0)
+            // Se o valor for 0, podemos ignorar a inserção
+            if (valor == 0) continue;
+
+            // Aloca uma nova célula para armazenar esse elemento não nulo
+            apontador nova = malloc(sizeof(celula));
+
+            // Preenche os campos da célula com os dados do elemento
+            nova->linha = i;
+            nova->coluna = j;
+            nova->valor = valor;
+
+            // === Inserção NA LISTA DA LINHA ===
+
+            // Localiza a cabeça da linha i (descendo a partir da raiz)
+            apontador pLinha = mat->raiz->abaixo;
+            for (int k = 0; k < i; k++)
             {
-                // Substitui toda a lógica manual por uma função reutilizável
-                insere_na_matriz(i, j, valor, mat);
+                pLinha = pLinha->abaixo;
             }
+
+            // Percorre a lista da linha até encontrar a posição correta (ordem crescente por coluna)
+            apontador p = pLinha;
+            while (p->direita != pLinha && p->direita->coluna < j)
+            {
+                p = p->direita;
+            }
+
+            // Insere a nova célula entre p e p->direita
+            nova->direita = p->direita;
+            p->direita = nova;
+
+            // === Inserção NA LISTA DA COLUNA ===
+
+            // Localiza a cabeça da coluna j (andando à direita a partir da raiz)
+            apontador pColuna = mat->raiz->direita;
+            for (int k = 0; k < j; k++)
+            {
+                pColuna = pColuna->direita;
+            }
+
+            // Percorre a lista da coluna até encontrar a posição correta (ordem crescente por linha)
+            p = pColuna;
+            while (p->abaixo != pColuna && p->abaixo->linha < i)
+            {
+                p = p->abaixo;
+            }
+
+            // Insere a nova célula entre p e p->abaixo
+            nova->abaixo = p->abaixo;
+            p->abaixo = nova;
         }
     }
 }
-
 
 
 void apaga_matriz(matriz *mat)
@@ -404,21 +482,27 @@ void imprime_matriz(const matriz* mat)
 
 }
 
-void insere_na_matriz(int linha, int coluna, float valor, matriz *mat)
+void insere_na_matriz (int linha, int coluna, float valor, matriz *mat)
 {
     // Não insere valores nulos na matriz esparsa.
-    if (valor == 0.0)
+    if(valor == 0.00)
         return;
 
     // === Localiza a cabeça da linha correspondente ===
-    apontador p_linha = mat->raiz->abaixo;
-    for (int i = 0; i < linha; i++)
-        p_linha = p_linha->abaixo;
+    apontador pLinha = mat->raiz->abaixo;
+    for(int i = 0; i < linha; i++)
+    {
+        pLinha = pLinha ->abaixo;
+
+    }
 
     // === Verifica se já existe uma célula na posição (linha, coluna) ===
-    apontador p = p_linha;
+    apontador p = pLinha;
+
     while (p->direita != p_linha && p->direita->coluna < coluna)
-        p = p->direita;
+    {
+        p =p->direita;
+    }
 
     if (p->direita != p_linha && p->direita->coluna == coluna)
     {
@@ -433,22 +517,11 @@ void insere_na_matriz(int linha, int coluna, float valor, matriz *mat)
     nova->coluna = coluna;
     nova->valor = valor;
 
+
     // === Insere ordenadamente na linha ===
     nova->direita = p->direita;
     p->direita = nova;
 
-    // === Localiza a cabeça da coluna correspondente ===
-    apontador p_coluna = mat->raiz->direita;
-    for (int j = 0; j < coluna; j++)
-        p_coluna = p_coluna->direita;
-
-    // === Insere ordenadamente na coluna ===
-    p = p_coluna;
-    while (p->abaixo != p_coluna && p->abaixo->linha < linha)
-        p = p->abaixo;
-
-    nova->abaixo = p->abaixo;
-    p->abaixo = nova;
 }
 
 
